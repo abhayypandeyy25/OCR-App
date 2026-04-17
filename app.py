@@ -301,6 +301,7 @@ def upload():
 
             results.append({
                 'filename': file.filename,
+                'image_url': f'/image/{filename}',
                 'structured': structured,
                 'processing_time': elapsed
             })
@@ -325,6 +326,7 @@ def process_existing():
     return jsonify({
         'results': [{
             'filename': filename,
+            'image_url': f'/image/{filename}',
             'structured': structured,
             'processing_time': elapsed
         }]

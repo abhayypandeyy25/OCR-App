@@ -569,8 +569,9 @@
                 const s = result.structured;
                 const timeStr = result.processing_time ? ` (${result.processing_time}s)` : '';
 
-                // Image preview
-                const imgPreview = `<img class="image-preview" src="/image/${encodeURIComponent(result.filename)}" alt="Invoice image" />`;
+                // Image preview - use image_url from backend (handles secure filenames)
+                const imgUrl = result.image_url || `/image/${encodeURIComponent(result.filename)}`;
+                const imgPreview = `<img class="image-preview" src="${imgUrl}" alt="Invoice image" onerror="this.style.display='none'" />`;
 
                 // Metadata cards
                 let metaHtml = '';
