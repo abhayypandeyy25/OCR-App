@@ -8,9 +8,20 @@ from werkzeug.utils import secure_filename
 import easyocr
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+# Use /tmp for uploads in cloud (read-only filesystem), local dir otherwise
+_local_uploads = os.path.join(os.path.dirname(__file__), 'uploads')
+try:
+    os.makedirs(_local_uploads, exist_ok=True)
+    # Test write access
+    _test = os.path.join(_local_uploads, '.write_test')
+    open(_test, 'w').close()
+    os.remove(_test)
+    UPLOAD_DIR = _local_uploads
+except OSError:
+    UPLOAD_DIR = os.path.join('/tmp', 'ocr_uploads')
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp'}
 
