@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice OCR App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #ffffff;
+            margin-bottom: 2rem;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area p {
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover { transform: scale(1.05); }
+
+        #file-input { display: none; }
+
+        /* Existing Images */
+        .existing-section {
+            margin-bottom: 2rem;
+        }
+
+        .existing-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #475569;
+        }
+
+        .existing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .existing-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .existing-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .existing-card .filename {
+            font-size: 0.85rem;
+            color: #475569;
+            word-break: break-all;
+        }
+
+        .existing-card .scan-label {
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        /* Processing Indicator */
+        .processing {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .processing.active { display: block; }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results */
+        .results-container {
+            display: none;
+        }
+
+        .results-container.active { display: block; }
+
+        .result-card {
+            background: #ffffff;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .result-header h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+
+        .result-header .processing-time {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-left: 1rem;
+        }
+
+        .result-body { padding: 1.5rem; }
+
+        /* Image Preview */
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+            display: block;
+        }
+
+        /* Metadata */
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .meta-card {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        .meta-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .meta-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        /* Tables */
+        .section-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #475569;
+            margin: 1.5rem 0 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        .data-table th {
+            background: #f1f5f9;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .data-table td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .conf-high { background: #dcfce7; color: #166534; }
+        .conf-mid { background: #fef9c3; color: #854d0e; }
+        .conf-low { background: #fee2e2; color: #991b1b; }
+
+        /* Raw Text */
+        .raw-text {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: #334155;
+        }
+
+        .raw-line {
+            padding: 0.2rem 0;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Copy button */
+        .copy-btn {
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover { background: #cbd5e1; color: #1e293b; }
+
+        .back-btn {
+            background: none;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        /* Process All button */
+        .process-all-btn {
+            background: linear-gradient(135deg, #059669, #0d9488);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
+        }
+
+        .process-all-btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Invoice OCR</h1>
+        <p class="subtitle">Extract structured text from invoice images</p>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="drop-zone">
+            <div class="upload-icon">&#128196;</div>
+            <p>Drag & drop invoice images here</p>
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+                Browse Files
+            </button>
+            <input type="file" id="file-input" multiple accept="image/*">
+            <p style="font-size: 0.8rem; margin-top: 0.75rem; color: #94a3b8;">
+                Supports JPG, PNG, BMP, TIFF, WebP (max 16MB)
+            </p>
+        </div>
+
+        <!-- Existing Images -->
+        {% if existing_images %}
+        <div class="existing-section" id="existing-section">
+            <h2>Images in Project Directory ({{ existing_images|length }})</h2>
+            <button class="process-all-btn" onclick="processAll()">
+                Scan All Images
+            </button>
+            <div class="existing-grid">
+                {% for img in existing_images %}
+                <div class="existing-card" onclick="processExisting('{{ img }}')">
+                    <div class="filename">{{ img }}</div>
+                    <span class="scan-label">Click to scan &rarr;</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Processing -->
+        <div class="processing" id="processing">
+            <div class="spinner"></div>
+            <p id="processing-text">Processing image with OCR...</p>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">
+                First run downloads language models (~50MB). Enhanced preprocessing active.
+            </p>
+        </div>
+
+        <!-- Results -->
+        <div class="results-container" id="results">
+            <button class="back-btn" onclick="showHome()">&larr; Back</button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const processing = document.getElementById('processing');
+        const resultsContainer = document.getElementById('results');
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append('files', file);
+            }
+
+            showProcessing(`Processing ${files.length} image(s)...`);
+
+            fetch('/upload', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => renderResults(data.results))
+                .catch(err => {
+                    hideProcessing();
+                    alert('Error processing images: ' + err.message);
+                });
+        }
+
+        function processExisting(filename) {
+            showProcessing(`Scanning: ${filename}`);
+
+            fetch('/process-existing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            })
+                .then(r => r.json())
+                .then(data => renderResults(data.results))
+                .catch(err => {
+                    hideProcessing();
+                    alert('Error: ' + err.message);
+                });
+        }
+
+        function processAll() {
+            const cards = document.querySelectorAll('.existing-card .filename');
+            const filenames = Array.from(cards).map(c => c.textContent);
+
+            showProcessing(`Scanning all ${filenames.length} images... This may take a few minutes.`);
+
+            processSequential(filenames, []);
+        }
+
+        function processSequential(remaining, results) {
+            if (remaining.length === 0) {
+                renderResults(results);
+                return;
+            }
+
+            const filename = remaining[0];
+            const total = document.querySelectorAll('.existing-card').length;
+            const done = total - remaining.length;
+            document.getElementById('processing-text').textContent =
+                `Scanning image ${done + 1} of ${total}: ${filename.substring(0, 40)}...`;
+
+            fetch('/process-existing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    results.push(...data.results);
+                    processSequential(remaining.slice(1), results);
+                })
+                .catch(err => {
+                    hideProcessing();
+                    alert('Error processing ' + filename + ': ' + err.message);
+                });
+        }
+
+        function showProcessing(text) {
+            document.getElementById('processing-text').textContent = text;
+            processing.classList.add('active');
+            dropZone.style.display = 'none';
+            const existing = document.getElementById('existing-section');
+            if (existing) existing.style.display = 'none';
+            resultsContainer.classList.remove('active');
+        }
+
+        function hideProcessing() {
+            processing.classList.remove('active');
+        }
+
+        function showHome() {
+            resultsContainer.classList.remove('active');
+            const cards = resultsContainer.querySelectorAll('.result-card');
+            cards.forEach(c => c.remove());
+            dropZone.style.display = '';
+            const existing = document.getElementById('existing-section');
+            if (existing) existing.style.display = '';
+        }
+
+        function confidenceClass(conf) {
+            if (conf >= 80) return 'conf-high';
+            if (conf >= 50) return 'conf-mid';
+            return 'conf-low';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderResults(results) {
+            hideProcessing();
+
+            resultsContainer.querySelectorAll('.result-card').forEach(c => c.remove());
+
+            for (const result of results) {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+
+                const s = result.structured;
+                const timeStr = result.processing_time ? ` (${result.processing_time}s)` : '';
+
+                // Image preview
+                const imgPreview = `<img class="image-preview" src="/image/${encodeURIComponent(result.filename)}" alt="Invoice image" />`;
+
+                // Metadata cards
+                let metaHtml = '';
+                if (Object.keys(s.metadata).length > 0) {
+                    metaHtml = '<div class="metadata-grid">';
+                    const labels = {
+                        gstin: 'GSTIN',
+                        date: 'Date',
+                        invoice_number: 'Invoice No.',
+                        total_amount: 'Total Amount',
+                        mobile: 'Mobile',
+                        seller_name: 'Seller',
+                        state: 'State'
+                    };
+                    for (const [key, val] of Object.entries(s.metadata)) {
+                        metaHtml += `
+                            <div class="meta-card">
+                                <div class="meta-label">${labels[key] || key}</div>
+                                <div class="meta-value">${escapeHtml(val)}</div>
+                            </div>`;
+                    }
+                    metaHtml += '</div>';
+                }
+
+                // Items table
+                let itemsHtml = '';
+                if (s.items.length > 0) {
+                    itemsHtml = `
+                        <div class="section-title">Line Items</div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Description</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    s.items.forEach((item, i) => {
+                        itemsHtml += `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${escapeHtml(item.text)}</td>
+                                <td><span class="confidence-badge ${confidenceClass(item.confidence)}">${item.confidence}%</span></td>
+                            </tr>`;
+                    });
+                    itemsHtml += '</tbody></table>';
+                }
+
+                // Totals table
+                let totalsHtml = '';
+                if (s.totals.length > 0) {
+                    totalsHtml = `
+                        <div class="section-title">Totals & Tax</div>
+                        <table class="data-table">
+                            <thead><tr><th>Description</th><th>Confidence</th></tr></thead>
+                            <tbody>`;
+                    s.totals.forEach(t => {
+                        totalsHtml += `
+                            <tr>
+                                <td>${escapeHtml(t.text)}</td>
+                                <td><span class="confidence-badge ${confidenceClass(t.confidence)}">${t.confidence}%</span></td>
+                            </tr>`;
+                    });
+                    totalsHtml += '</tbody></table>';
+                }
+
+                // Raw text
+                let rawHtml = s.raw_lines.map(l =>
+                    `<div class="raw-line">${escapeHtml(l.text)}  <span class="confidence-badge ${confidenceClass(l.confidence)}" style="font-size:0.7rem">${l.confidence}%</span></div>`
+                ).join('');
+
+                const fullText = s.raw_lines.map(l => l.text).join('\n');
+
+                card.innerHTML = `
+                    <div class="result-header">
+                        <h3>${escapeHtml(result.filename)}<span class="processing-time">${timeStr}</span></h3>
+                        <button class="copy-btn" onclick="copyFromCard(this)">
+                            Copy Text
+                        </button>
+                    </div>
+                    <div class="result-body">
+                        ${imgPreview}
+                        ${metaHtml}
+
+                        <div class="tab-bar">
+                            <button class="tab-btn active" onclick="switchTab(this, 'structured')">Structured</button>
+                            <button class="tab-btn" onclick="switchTab(this, 'raw')">Raw Text</button>
+                        </div>
+
+                        <div class="tab-content active" data-tab="structured">
+                            ${itemsHtml || '<p style="color:#64748b">No structured items detected</p>'}
+                            ${totalsHtml}
+                        </div>
+                        <div class="tab-content" data-tab="raw">
+                            <div class="raw-text">${rawHtml}</div>
+                        </div>
+                    </div>`;
+
+                card._fullText = fullText;
+                resultsContainer.appendChild(card);
+            }
+
+            resultsContainer.classList.add('active');
+        }
+
+        function copyFromCard(btn) {
+            const card = btn.closest('.result-card');
+            const text = card._fullText || '';
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = orig, 1500);
+            });
+        }
+
+        function switchTab(btn, tab) {
+            const card = btn.closest('.result-card');
+            card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            card.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.toggle('active', c.dataset.tab === tab);
+            });
+        }
+    </script>
+</body>
+</html>
