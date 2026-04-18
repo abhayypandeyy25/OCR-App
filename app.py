@@ -34,7 +34,7 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-GEMINI_MODEL = 'gemini-2.0-flash'
+GEMINI_MODEL = 'gemini-2.5-flash'
 
 # Rate limiter for Gemini free tier (15 RPM)
 _gemini_lock = threading.Lock()
