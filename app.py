@@ -158,33 +158,42 @@ def run_gemini_ocr(filepath):
             time.sleep(wait)
         _last_call_time = time.time()
 
-    # Call Gemini
+    # Call Gemini with native JSON mode
     model = genai.GenerativeModel(GEMINI_MODEL)
     response = model.generate_content(
         [INVOICE_PROMPT, img],
         generation_config=genai.types.GenerationConfig(
             temperature=0.1,
-            max_output_tokens=4096,
+            max_output_tokens=8192,
+            response_mime_type="application/json",
         ),
     )
 
     # Parse JSON response
     text = response.text.strip()
+    # Strip markdown fences if present (safety net)
     if text.startswith('```'):
         text = re.sub(r'^```(?:json)?\s*', '', text)
         text = re.sub(r'\s*```$', '', text)
 
     try:
         structured = json.loads(text)
-    except json.JSONDecodeError:
-        structured = {
-            "seller": {"name": ""},
-            "buyer": {"name": ""},
-            "invoice_info": {"invoice_number": "", "date": ""},
-            "items": [],
-            "grand_total": "",
-            "raw_text": text
-        }
+    except json.JSONDecodeError as e:
+        print(f"JSON parse failed: {e}\nRaw response: {text[:500]}")
+        # Try extracting JSON between first { and last }
+        try:
+            first = text.index('{')
+            last = text.rindex('}')
+            structured = json.loads(text[first:last+1])
+        except (ValueError, json.JSONDecodeError):
+            structured = {
+                "seller": {"name": ""},
+                "buyer": {"name": ""},
+                "invoice_info": {"invoice_number": "", "date": ""},
+                "items": [],
+                "grand_total": "",
+                "raw_text": text
+            }
 
     # Clean up enhanced image
     if enhanced_path and os.path.exists(enhanced_path):
